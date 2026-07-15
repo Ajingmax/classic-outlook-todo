@@ -82,7 +82,20 @@ Automatic installation depends on `winget`, Microsoft 365 licensing, and company
 
 ## Quick Start / 快速开始
 
-Clone or download this project, then run:
+Download ZIP:
+
+```text
+https://github.com/Ajingmax/classic-outlook-todo/archive/refs/heads/main.zip
+```
+
+Or clone:
+
+```powershell
+git clone https://github.com/Ajingmax/classic-outlook-todo.git
+cd classic-outlook-todo
+```
+
+Then run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
