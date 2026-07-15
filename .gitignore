@@ -1,0 +1,10 @@
+runtime/
+work/
+state/
+logs/
+config/outlook-todo.config.json
+*.zip
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
