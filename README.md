@@ -1,278 +1,71 @@
-# 读取 Outlook 文件建立代办 / Classic Outlook Todo
+# Classic Outlook Reader / Outlook 邮件读取
 
-一个面向企业 Windows 电脑的本地 Outlook 邮件待办生成工具。  
-It turns locally available Classic Outlook mail into AI-readable todo candidates when Microsoft Graph, Outlook add-ins, or cloud automation tools are blocked by company admin policies.
+A read-only skill for local agents on Windows. Read Classic Outlook through COM/MAPI and return JSON. No Microsoft Graph or cloud email permissions are needed.
 
-## 中文介绍
-
-很多公司会限制 Microsoft Graph、Outlook Add-ins、Zapier、Make、Power Automate 云连接器等权限。这个项目提供另一条路径：
-
-- 使用 **Classic Outlook** 本地 COM/MAPI 接口读取邮件。
-- 不需要 Microsoft Graph 管理员授权。
-- 不发送、不删除、不移动、不归档邮件。
-- 扫描收件箱和发件箱，判断哪些邮件可能需要你处理。
-- 输出 Markdown 和 JSON，让 Codex、Claude 或其他 agent 生成每日待办。
-
-适合场景：
-
-- 公司 Outlook 账号有管理员限制，无法授权第三方应用。
-- 电脑上已经能登录 Classic Outlook。
-- 你希望每天早上/中午自动生成待办。
-- 你希望选择提醒范围，例如只看收件人是自己、CC、正文 @ 自己、未读、重要邮件。
-- 你希望按自己的邮箱结构选择收件箱，例如所有收件箱、重要、未读、自定义文件夹。
-- 你希望自动识别邮件类别，例如客户问题、会议、物流、技术、营销、广告、系统通知。
-- 你希望同时检查发件箱，降低“已经回复过的邮件”重复提醒。
-
-## English Overview
-
-This project helps people create a daily email todo workflow on locked-down enterprise Windows machines.
-
-When admin approval blocks Microsoft Graph, cloud connectors, or Outlook add-ins, this workflow reads **Classic Outlook** locally through Windows COM/MAPI and writes AI-readable candidate files.
-
-It is designed for:
-
-- Company Outlook accounts with admin approval restrictions.
-- Users who can sign in to Classic Outlook on their PC.
-- Daily morning/noon todo reminders.
-- Configurable recipient scope: direct recipient, CC, mention, unread, important.
-- Configurable mailbox scope: default Inbox, all Inbox folders, Important, Unread Mail, or custom folders.
-- Auto category detection: customer issues, meetings, logistics, technical work, marketing, ads, system notifications.
-- Sent Items scanning to detect threads already answered by the user.
-
-## What It Does
-
-The scanner writes:
-
-- `work/outlook-action-candidates.md`
-- `state/outlook-action-candidates.json`
-- `work/detected-categories.md`
-- `logs/scan-outlook-last-run.log`
-
-An AI agent can then read those files and generate a daily todo list.
-
-## What It Does Not Do
-
-This tool does **not**:
-
-- send email
-- delete email
-- move email
-- archive email
-- mark email as read
-- click links
-- open attachments
-- bypass company security controls
-
-It only reads locally available Outlook data from the signed-in Windows user profile.
+Windows 本地邮件读取 skill：仅通过 Classic Outlook COM/MAPI 读取元数据和分页纯文本正文，输出 JSON。没有邮件汇总、待办、Case 写入、定时任务或附件导出功能。
 
 ## Requirements / 前置条件
 
-- Windows 10 or Windows 11
-- PowerShell 5.1+
-- Classic Outlook installed and signed in
-- A local AI/coding agent such as Codex, Claude, Cursor, or another tool that can read Markdown/JSON files
+- Windows 10/11 and Windows PowerShell 5.1+.
+- Classic Outlook installed, signed in, online, and containing the requested SMTP account. New Outlook is unsupported.
+- Run under the same Windows user session. Outlook permissions and enterprise policy still apply.
+- An agent able to run PowerShell, or run the script directly.
 
-If Classic Outlook is missing, the installer can try a best-effort installation:
+## Install / 安装
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -InstallIfMissing
-```
+Clone this repository or choose **Code → Download ZIP**, then extract it. The repository name remains `classic-outlook-todo` for existing links; its current contents are a reader only. The former todo tool has been removed.
 
-Automatic installation depends on `winget`, Microsoft 365 licensing, and company IT policy. If it fails, install Microsoft 365 Apps / Classic Outlook manually, open Outlook once, sign in, then rerun the installer.
-
-## Quick Start / 快速开始
-
-Download ZIP:
-
-```text
-https://github.com/Ajingmax/classic-outlook-todo/archive/refs/heads/main.zip
-```
-
-Or clone:
+克隆或下载解压即可运行。仓库保留旧名称以保留链接，当前内容仅为读取工具，旧待办功能已删除。无需运行安装程序，不会创建定时任务。
 
 ```powershell
 git clone https://github.com/Ajingmax/classic-outlook-todo.git
 cd classic-outlook-todo
 ```
 
-Then run:
+For Codex, copy the extracted repository folder to `~/.codex/skills/classic-outlook-reader`. Other agents can read `SKILL.md` directly. Keep mail outputs outside the repository.
+
+作为 Codex skill 使用时，将解压目录复制为 `~/.codex/skills/classic-outlook-reader`；其他 agent 可直接读取 `SKILL.md`。邮件输出应保存在仓库外。
+
+## Scan metadata / 读取列表
+
+Replace the sample account and dates. Include explicit UTC offsets. Scan reads metadata only. Failures stop the scan rather than claiming completeness. Check Truncated; if true, split the time interval and scan again. The interval includes From and excludes Until. Results are sorted by time after collecting up to MaxMessages; they are not necessarily the globally newest messages.
+
+替换示例账号和日期，时间必须包含时区偏移。扫描只读取列表，不加载正文。读取失败会报错；检查 Truncated，若为 true 则缩小时间范围重读。时间范围包含 From、不包含 Until。达到上限时不保证返回全库最新邮件。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1
+.\scripts\read-outlook.ps1 -Mode Scan -Account 'you@example.com' `
+  -From '2026-11-24T00:00:00+11:00' -Until '2026-11-25T00:00:00+11:00' `
+  -MaxMessages 100
 ```
 
-Default runtime folder:
+## Read one message / 读取正文
 
-```text
-%USERPROFILE%\Documents\OutlookTodo
+Copy the exact identifiers from a Scan row. Continue at NextOffset until End=true.
+
+从列表复制原样的 EntryId、StoreId 和 Key；长正文用 NextOffset 继续读取，直到 End=true。
+
+```powershell
+.\scripts\read-outlook.ps1 -Mode Read -Account 'you@example.com' `
+  -EntryId '<EntryId from Scan>' -StoreId '<StoreId from Scan>' `
+  -Key '<Key from Scan>' -Offset 0 -Limit 6000
 ```
 
-The installer will:
+Only JSON is written to stdout. Redirecting output saves private metadata/body to your chosen local file. Do not commit such files. There is no processed ledger; repeated reads may return the same message.
 
-1. Check Classic Outlook.
-2. Create runtime folders.
-3. Create `config/outlook-todo.config.json`.
-4. Copy the scanner script.
-5. Register a Windows scheduled task.
-6. Run one test scan.
+脚本只向标准输出返回 JSON，不保存处理状态，不记录“已处理”。重定向会在指定位置保存私人邮件内容，请勿提交到 GitHub。
 
-Recommended reminder design:
+## Boundaries / 读取边界
 
-- scan mail at `06:55`
-- generate AI summary at `07:00`
-- scan mail at `11:55`
-- generate AI summary at `12:00`
+The selected account's accessible delivery store is scanned, excluding deleted/junk/drafts/outbox, non-mail system folders and virtual search folders. Protected/private bodies are refused. Cached data may be incomplete; scans do not establish full server, PST or shared-mailbox coverage. Message-ID hashes deduplicate within each scan; StoreID/EntryID fallback keys may change if moved.
 
-## Configuration / 配置选项
+仅读取选定账号本地可访问的邮件库，排除已删除、垃圾、草稿、发件中、非邮件系统文件夹及虚拟搜索文件夹。受保护或私人正文不读取。本地缓存不等于服务器全量。没有发送、移动、删除、归档、标为已读、附件解析或汇总动作。
 
-Edit:
+## Validation / 验证
 
-```text
-%USERPROFILE%\Documents\OutlookTodo\config\outlook-todo.config.json
+```powershell
+.\scripts\test-reader.ps1
 ```
 
-### 1. Recipient Scope / 提醒范围
+Offline tests use synthetic objects and do not connect to Outlook. Real mailbox access depends on the local Outlook profile and permissions.
 
-```json
-"recipientScope": {
-  "directTo": true,
-  "cc": false,
-  "mentionInSubjectOrBody": true,
-  "unreadOnly": false,
-  "importantOnly": false
-}
-```
-
-Common choices:
-
-- Only mail sent directly to me: `directTo=true`, `cc=false`
-- Include CC mail: `cc=true`
-- Include messages mentioning my name: `mentionInSubjectOrBody=true`
-- Only unread mail: `unreadOnly=true`
-- Only high importance mail: `importantOnly=true`
-
-### 2. Mailbox Scope / 收件箱范围
-
-```json
-"folderScope": {
-  "defaultInbox": true,
-  "allInboxes": false,
-  "folderNames": ["Inbox", "Important", "Unread Mail"]
-}
-```
-
-Options:
-
-- `defaultInbox`: default Outlook Inbox.
-- `allInboxes`: all Inbox folders across mailboxes.
-- `folderNames`: custom folder names such as `Important`, `Unread Mail`, project folders, or shared mailbox folders.
-
-### 3. Category Detection / 邮件类型识别
-
-```json
-"categories": {
-  "include": ["customer_issue", "meeting", "logistics", "technical", "deadline"],
-  "exclude": ["marketing", "advertising", "newsletter", "system_notification"],
-  "autoDetect": true
-}
-```
-
-Built-in categories:
-
-- `customer_issue`
-- `meeting`
-- `logistics`
-- `technical`
-- `deadline`
-- `marketing`
-- `advertising`
-- `newsletter`
-- `system_notification`
-
-After each scan, review:
-
-```text
-work/detected-categories.md
-```
-
-Use it to decide which categories should be included or excluded for your job.
-
-### 4. Reminder Times / 每日提醒时间
-
-```json
-"reminder": {
-  "suggestedSummaryTimes": ["07:00", "12:00"],
-  "scanTimes": ["06:55", "11:55"]
-}
-```
-
-The scanner should run a few minutes before the AI summary.
-
-### 5. Sent Items / 发件箱检测
-
-```json
-"sentMail": {
-  "scanSentItems": true,
-  "lowerPriorityIfAlreadyReplied": true
-}
-```
-
-This checks Sent Items for matching conversations. If the user has already replied, the candidate will be marked:
-
-```text
-Already replied from Sent Items: True
-```
-
-The AI agent should usually lower its priority unless the latest inbound email still asks for action.
-
-## Agent Usage / 给 Agent 的使用方式
-
-For Codex, Claude, or another coding agent:
-
-1. Read `SKILL.md`.
-2. Run or inspect `scripts/install.ps1`.
-3. Read the runtime output files:
-   - `work/outlook-action-candidates.md`
-   - `state/outlook-action-candidates.json`
-   - `state/closed-decisions.json` if present
-4. Generate a concise daily todo Markdown file.
-5. Use stable item numbers such as `A1`, `A2`, `W1`, `F1`, `C1`.
-6. When the user says an item is done or irrelevant, write it to `state/closed-decisions.json` so it does not reappear.
-
-Recommended todo sections:
-
-```markdown
-# Outlook Daily Todo
-
-## Actions
-- [ ] A1 ...
-
-## Waiting / Monitor
-- [ ] W1 ...
-
-## Filtered / Not Actionable
-- F1 ...
-
-## Suggested Close
-- C1 ...
-```
-
-## Security Notes / 安全说明
-
-This project does not bypass admin controls. It uses Outlook data already available to the signed-in Windows user through Classic Outlook.
-
-If your company prohibits local automation against Outlook, do not use this tool.
-
-## Project Name
-
-Chinese project name:
-
-```text
-读取outlook文件建立代办
-```
-
-Suggested English repository name:
-
-```text
-classic-outlook-todo
-```
+离线测试使用模拟数据，不连接 Outlook。实际访问取决于本机 Outlook 配置及权限。

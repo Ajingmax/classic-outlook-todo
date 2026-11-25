@@ -1,10 +1,14 @@
-runtime/
-work/
-state/
-logs/
-config/outlook-todo.config.json
-*.zip
+# Local mailbox outputs and settings must remain private.
+*.json
+*.jsonl
+*.pst
+*.ost
+*.msg
+*.eml
 *.log
-*.tmp
-.DS_Store
-Thumbs.db
+*.zip
+state/
+output/
+outputs/
+config/
+__pycache__/

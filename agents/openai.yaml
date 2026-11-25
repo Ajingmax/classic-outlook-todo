@@ -1,3 +1,4 @@
-display_name: 'Classic Outlook Todo'
-short_description: 'Read Classic Outlook locally and generate daily email todo candidates when Graph is blocked.'
-default_prompt: 'Use $classic-outlook-todo to set up or operate a local Outlook-to-Markdown todo workflow.'
+interface:
+  display_name: "Classic Outlook Reader"
+  short_description: "Read Outlook metadata and paged message bodies"
+  default_prompt: "Use $classic-outlook-reader to read messages from my selected Outlook account and date range."
